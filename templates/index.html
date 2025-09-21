@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Предсказание риска сердечного приступа</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        h2 {
+            color: #34495e;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+        }
+        .upload-form {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .file-input {
+            margin: 10px 0;
+            padding: 10px;
+            border: 2px dashed #ccc;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .btn {
+            background: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #2980b9;
+        }
+        .btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .results {
+            margin: 20px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .download-btn {
+            background: #27ae60;
+            margin: 20px 0;
+        }
+        .download-btn:hover {
+            background: #229954;
+        }
+        .error {
+            color: #e74c3c;
+            padding: 10px;
+            background: #fadbd8;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .success {
+            color: #27ae60;
+            padding: 10px;
+            background: #d5f4e6;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Приветствуем вас в нашем приложении!</h1>
+    
+    <p>Мы помогаем оценивать вероятность сердечного приступа по данным пациентов. Всю сложную работу выполняет интеллектуальная модель, работающая незаметно для пользователя.</p>
+
+    <h2>Как это работает?</h2>
+    <ol>
+        <li>Подготовьте CSV-файл с данными пациентов.</li>
+        <li>Загрузите файл с помощью формы ниже.</li>
+        <li>Нажмите "Предсказать", и вы увидите таблицу с ID пациента и предсказанной вероятностью риска.</li>
+    </ol>
+
+    <div class="upload-form">
+        <form id="uploadForm" enctype="multipart/form-data">
+            <div class="file-input">
+                <input type="file" id="fileInput" name="file" accept=".csv" style="display: none;">
+                <button type="button" class="btn" onclick="document.getElementById('fileInput').click()">
+                    Выберите файл
+                </button>
+                <span id="fileName">Файл не выбран</span>
+            </div>
+            <button type="submit" class="btn" id="predictBtn">Предсказать</button>
+        </form>
+    </div>
+
+    <div class="loading" id="loading">
+        <p>Обработка данных...</p>
+    </div>
+
+    <div id="errorMessage" class="error" style="display: none;"></div>
+    <div id="successMessage" class="success" style="display: none;"></div>
+
+    <hr>
+
+    <h2>Результаты предсказания</h2>
+    
+    <!-- КНОПКА СКАЧИВАНИЯ ПЕРЕМЕЩЕНА ВВЕРХ -->
+    <div style="margin: 20px 0;">
+        <button class="btn download-btn" id="downloadBtn" style="display: none;">
+            Скачать результат в CSV
+        </button>
+    </div>
+    
+    <div class="results" id="resultsSection" style="display: none;">
+        <table id="resultsTable">
+            <thead>
+                <tr>
+                    <th>ID пациента</th>
+                    <th>Вероятность риска</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        let currentResultId = null;
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const fileName = e.target.files[0] ? e.target.files[0].name : 'Файл не выбран';
+            document.getElementById('fileName').textContent = fileName;
+        });
+
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('fileInput');
+            const predictBtn = document.getElementById('predictBtn');
+            const loading = document.getElementById('loading');
+            const errorMessage = document.getElementById('errorMessage');
+            const successMessage = document.getElementById('successMessage');
+            const downloadBtn = document.getElementById('downloadBtn');
+            
+            if (!fileInput.files[0]) {
+                showError('Пожалуйста, выберите файл');
+                return;
+            }
+
+            predictBtn.disabled = true;
+            loading.style.display = 'block';
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+            downloadBtn.style.display = 'none';
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentResultId = data.result_id;
+                    showResults(data.results);
+                    downloadBtn.style.display = 'block'; // Показываем кнопку
+                    showSuccess('Предсказание успешно завершено!');
+                } else {
+                    showError(data.error || 'Произошла ошибка при обработке файла');
+                }
+            } catch (error) {
+                showError('Ошибка соединения с сервером');
+            } finally {
+                predictBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        });
+
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            if (currentResultId) {
+                window.location.href = `/download_results/${currentResultId}`;
+            } else {
+                showError('Нет результатов для скачивания');
+            }
+        });
+
+        function showError(message) {
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        function showSuccess(message) {
+            const successMessage = document.getElementById('successMessage');
+            successMessage.textContent = message;
+            successMessage.style.display = 'block';
+        }
+
+        function showResults(results) {
+            const resultsSection = document.getElementById('resultsSection');
+            const tbody = document.querySelector('#resultsTable tbody');
+            
+            tbody.innerHTML = '';
+            
+            results.forEach(result => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${result.id}</td>
+                    <td>${result.risk_probability}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            resultsSection.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
