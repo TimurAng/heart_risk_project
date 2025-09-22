@@ -44,8 +44,8 @@ ML модель для предсказания риска сердечно-со
 
 ### 1. Клонирование репозитория
 ```bash
-git clone https://github.com/ваш-username/heart_risk_project.git
-cd heart_risk_projectКлонирование репозитория
+git clone https://github.com/TimurAng/heart_risk_project.git
+cd heart_risk_project
 ```
 ### 2. Создайте и активируйте виртуальное окружение
 ```bash
