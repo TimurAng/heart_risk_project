@@ -43,12 +43,12 @@ ML модель для предсказания риска сердечно-со
 - pip (менеджер пакетов Python)
 
 ### 1. Клонирование репозитория
-
+```bash
 git clone https://github.com/ваш-username/heart_risk_project.git
 cd heart_risk_projectКлонирование репозитория
-
+```
 ### 2. Создайте и активируйте виртуальное окружение
-
+```bash
 # Для macOS / Linux
 python3 -m venv .venv
 source .venv/bin/activate
@@ -56,15 +56,15 @@ source .venv/bin/activate
 # Для Windows
 python -m venv .venv
 .venv\Scripts\activate
-
+```
 ### 3. Установите зависимости
-
+```bash
 pip install -r requirements.txt
-
+```
 ### 4. Запустите веб-сервер
-
+```bash
 uvicorn main:app --reload
-
+```
 ### 5. Откройте приложение в браузере
 
 http://127.0.0.1:8000
